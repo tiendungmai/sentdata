@@ -26,51 +26,65 @@ import java.util.logging.Logger;
  */
 public class Test {
     private final Logger logger = Logger.getLogger(Test.class.getName());
-    private final String USER_AGENT = "Sent Data";
+    private final static String USER_AGENT = "Sent Data";
 
     public static void main(String[] args) throws Exception {
+
         HttpURLConnection connection = null;
         URL url = new URL("http://lg1.logging.admicro.vn/dsp_adx");
-        connection = (HttpURLConnection) url.openConnection();
+
+        //URL url = new URL("http:localhost");
+        /*connection = (HttpURLConnection) url.openConnection();
+
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
+        connection.setRequestProperty("Connection", "Keep-Alive");
         connection.setRequestProperty("Content-Language", "en-US");
 
         connection.setUseCaches(false);
         connection.setDoOutput(true);
+        */
 
         ArrayList<String> lineR = new ArrayList<String>();
         lineR = logPage();
 
         ArrayList<String> listParam = new ArrayList<String>();
         listParam = listparams(lineR);
+        /*Iterator<String> iterator = listParam.iterator();
+        while (iterator.hasNext()) {
+
+            String params = iterator.next();
+            System.out.println(params);
+
+        }*/
+
         long start = System.currentTimeMillis();
-        System.out.println("Sum reques: " +listParam.size());
-        ExecutorService executor = Executors.newFixedThreadPool(30);
+
+        System.out.println("Sum reques: " + listParam.size());
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        connection = conn(url);
         Iterator<String> iterator = listParam.iterator();
         while (iterator.hasNext()) {
 
             String params = iterator.next();
-            // System.out.println(params);
-            GetThread getThread = new GetThread(params, connection, url);
+            //System.out.println(params);
+            GetThread getThread = new GetThread(params,connection);
             executor.submit(getThread);
         }
-
+        connection.disconnect();
         executor.shutdown();
 
         // Wait until all threads are finish
         while (!executor.isTerminated()) {
         }
         long finish = System.currentTimeMillis();
-        long sumtime = (finish - start)/1000;
-        System.out.println("Time sent: "+(finish - start));
-        System.out.println("Request/s: "+ listParam.size()/sumtime);
+        long sumtime = (finish - start);
+        System.out.println("Time sent: " + (finish - start));
+        System.out.println("Request(K)/s: " + listParam.size() / sumtime);
 
     }
 
     public static ArrayList<String> listparams(ArrayList<String> line) {
-
 
         ArrayList<String> list = new ArrayList<String>();
         Iterator<String> iterator = line.iterator();
@@ -161,7 +175,8 @@ public class Test {
 
     private static ArrayList<String> logPage() {
         ArrayList<String> logpage = new ArrayList<String>();
-        File folder = new File("/home/tiendungmai/Desktop/sample text");
+        //File folder = new File("/home/tiendungmai/Desktop/sample text");
+        File folder = new File("/home/tiendungmai/Desktop/temp");
         File[] listFile = folder.listFiles();
         //System.out.println("so file: " + listFile.length);
         System.out.println("Reading file...");
@@ -203,37 +218,56 @@ public class Test {
     static class GetThread implements Runnable {
         private String request;
         private HttpURLConnection connection;
-        private URL url;
+        //private URL url;
 
-        public GetThread(String request, HttpURLConnection connection, URL url) {
+        public GetThread(String request,  HttpURLConnection connection ) {
             this.request = request;
             this.connection = connection;
-            this.url = url;
+            //this.url = url;
         }
 
 
         public void run() {
+           // HttpURLConnection connection = null;
 
             try {
 
-                //connection.setRequestProperty("Content-Length",   Integer.toString(request.getBytes().length));
-
                 //Send request
+                connection.setRequestProperty("Content-Length",   Integer.toString(request.getBytes().length));
                 DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
                 wr.writeBytes(request);
+                wr.flush();
                 //System.out.println("done");
                 //int responseCode = connection.getResponseCode();
 
                 //print result
-                //System.out.println(responseCode);
+              //  System.out.println(responseCode);
+
                 wr.close();
             } catch (MalformedURLException ex) {
                 Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
                 Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+                //System.out.println("er");
+            }finally {
+                //connection.disconnect();
             }
 
         }
     }
+
+    public static HttpURLConnection conn(URL url ) throws IOException {
+        HttpURLConnection conn = null;
+        //URL url = new URL("http://lg1.logging.admicro.vn/dsp_adx");
+        conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setRequestProperty("USER_AGENT",USER_AGENT);
+        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        conn.setRequestProperty("Content-Language", "en-US");
+        return conn;
+    }
+
 
 }
